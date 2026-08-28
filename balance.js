@@ -1,8 +1,8 @@
 // Universal eating rule: every food is edible from the start.
-// Also neutralize the legacy `need` gate in game.js so this remains true even if the old check runs.
+// Neutralize the legacy size gate kept in game.js.
 for(const type of TYPES){ type.need=1; }
 
-window.startEat=function(f){
+startEat=function(f){
   if(eating)return;
   eating=true;
   eatFood=f;
@@ -15,7 +15,7 @@ window.startEat=function(f){
   flash(`${f.type.emoji} ${f.type.name} をモグモグ…`);
 };
 
-window.checkFood=function(){
+checkFood=function(){
   if(eating)return;
   const hs=hamPx();
   for(let i=foods.length-1;i>=0;i--){
