@@ -1,5 +1,8 @@
-// All foods are edible. Foods larger than the hamster take increasingly longer to finish.
-function startEat(f){
+// Universal eating rule: every food is edible from the start.
+// Also neutralize the legacy `need` gate in game.js so this remains true even if the old check runs.
+for(const type of TYPES){ type.need=1; }
+
+window.startEat=function(f){
   if(eating)return;
   eating=true;
   eatFood=f;
@@ -7,18 +10,17 @@ function startEat(f){
   const hamArea=hamSize*hamSize;
   const foodArea=f.type.w*f.type.h;
   const ratio=Math.max(1,foodArea/hamArea);
-  // Larger targets become dramatically slower: 1x1 hamster vs 4x4 watermelon is ~32s.
+  // Bigger than the hamster = dramatically slower. 1x1 vs 4x4 is roughly 32 seconds.
   eatDuration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
   flash(`${f.type.emoji} ${f.type.name} をモグモグ…`);
-}
+};
 
-function checkFood(){
+window.checkFood=function(){
   if(eating)return;
   const hs=hamPx();
   for(let i=foods.length-1;i>=0;i--){
     const f=foods[i],r=rect(f);
     if(!overlaps(hamX,hamY,hs,hs,r.x,r.y,r.w,r.h))continue;
-    // No size/level restriction: every food can be eaten.
     if(smallEnough(f)){
       reward(f,'パクッ！');
       continue;
@@ -26,4 +28,4 @@ function checkFood(){
     startEat(f);
     return;
   }
-}
+};
