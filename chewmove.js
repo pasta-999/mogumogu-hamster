@@ -139,16 +139,25 @@ reset=function(){
   chewResetBase();
 };
 
+// Size the visible food by its effective cell area, not by the shortest side
+// of its collision rectangle. This makes 4-cell bread visibly smaller than
+// 6-cell cake and 8-cell watermelon even when they share the same height.
+function foodGlyphSize(f,w,h){
+  const byArea=CELL*Math.sqrt(foodArea(f))*.62;
+  const fit=Math.min(w,h)*.90;
+  return Math.max(20,Math.min(byArea,fit));
+}
+
 // Lightweight persistent bite marks. No per-food offscreen canvas is created.
-function drawChewBites(x,y,w,h,p){
+function drawChewBites(cx,cy,size,p){
   if(p<=0)return;
   const count=Math.min(4,Math.max(1,Math.ceil(p*4)));
-  const radius=Math.max(5,Math.min(w,h)*(.055+p*.018));
+  const radius=Math.max(5,size*(.055+p*.018));
   ctx.save();
   ctx.fillStyle='#f0d7ac';
   for(let i=0;i<count;i++){
-    const bx=x+w*(.69+(i%2)*.11);
-    const by=y+h*(.25+Math.floor(i/2)*.20);
+    const bx=cx+size*(.23+(i%2)*.10);
+    const by=cy+size*(-.22+Math.floor(i/2)*.20);
     ctx.beginPath();ctx.arc(bx,by,radius,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
@@ -164,15 +173,17 @@ drawFood=function(f,now){
     return;
   }
 
+  const glyphSize=foodGlyphSize(f,w,h);
+  const cx=x+w/2,cy=y+h/2;
   ctx.save();
-  ctx.translate(x+w/2,y+h/2);
+  ctx.translate(cx,cy);
   ctx.scale(shrink,shrink);
-  ctx.font=`${Math.min(w,h)*.58}px system-ui`;
+  ctx.font=`${glyphSize}px system-ui`;
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(f.type.emoji,0,-2);
   ctx.restore();
 
-  drawChewBites(x,y,w,h,p);
+  drawChewBites(cx,cy,glyphSize,p);
 
   if(foodArea(f)>1){
     ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
