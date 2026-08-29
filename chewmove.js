@@ -8,12 +8,21 @@ const CHEW_NEAR_MARGIN=CELL*0.55;
 const chewProgressById=new Map();
 let chewLastTick=performance.now();
 
+function foodArea(f){return f.type.w*f.type.h;}
+
+function needsChewing(f){
+  // At the starting 2x2 size, only the 1-cell sunflower seed is an instant pickup.
+  // Once the hamster grows, foods no larger than the hamster become instant pickups.
+  if(hamSize<=2)return f.type.name!=='ひまわりの種';
+  return foodArea(f)>hamSize*hamSize;
+}
+
 function chewDurationFor(f){
   const hamArea=hamSize*hamSize;
-  const foodArea=f.type.w*f.type.h;
-  const ratio=Math.max(1,foodArea/hamArea);
+  const area=foodArea(f);
+  const ratio=Math.max(1,area/hamArea);
   let duration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
-  if(f.type.name==='クッキー'&&hamSize<=2)duration=Math.max(duration,2300);
+  if(area===4&&hamSize<=2)duration=Math.max(duration,2300);
   return duration;
 }
 
@@ -42,6 +51,19 @@ eatProgress=function(){
   return Math.max(0,Math.min(1,chewProgressById.get(eatFood.id)||0));
 };
 
+function overlappingFoodsSmallestFirst(){
+  const hs=hamPx(),hcX=centerX(),hcY=centerY();
+  const candidates=[];
+  for(const f of foods){
+    const r=rect(f);
+    if(!overlaps(hamX,hamY,hs,hs,r.x,r.y,r.w,r.h))continue;
+    const fcX=r.x+r.w/2,fcY=r.y+r.h/2;
+    candidates.push({f,area:foodArea(f),dist:(fcX-hcX)*(fcX-hcX)+(fcY-hcY)*(fcY-hcY)});
+  }
+  candidates.sort((a,b)=>a.area-b.area||a.dist-b.dist);
+  return candidates.map(v=>v.f);
+}
+
 updateMove=function(dt){
   moving=false;
   if(!playing)return;
@@ -53,7 +75,10 @@ updateMove=function(dt){
   hamX+=q.nx*speed*dt/1000;
   hamY+=q.ny*speed*dt/1000;
   ensureChunks();
-  if(!eating)checkFood();
+
+  // Always check pickups while moving, even if a larger food is already being chewed.
+  // This lets a seed beside/under bread get picked up instead of being hidden by it.
+  checkFood();
 };
 
 updateEating=function(now){
@@ -83,18 +108,26 @@ updateEating=function(now){
 };
 
 checkFood=function(){
-  const hs=hamPx();
-  for(let i=foods.length-1;i>=0;i--){
-    const f=foods[i],r=rect(f);
-    if(!overlaps(hamX,hamY,hs,hs,r.x,r.y,r.w,r.h))continue;
+  const candidates=overlappingFoodsSmallestFirst();
+  if(!candidates.length)return;
 
-    const cookieNeedsChewing=f.type.name==='クッキー'&&hamSize<=2;
-    if(smallEnough(f)&&!cookieNeedsChewing){
-      reward(f,'パクッ！');
-      continue;
+  // First collect every instant small pickup in size order.
+  // This works even while a larger food is already being chewed.
+  for(const f of candidates){
+    if(!foods.some(v=>v.id===f.id))continue;
+    if(!needsChewing(f))reward(f,'パクッ！');
+  }
+
+  // Do not switch the active large food merely because another large food overlaps.
+  if(eating)return;
+
+  // Then start chewing the smallest remaining chewable food.
+  for(const f of candidates){
+    if(!foods.some(v=>v.id===f.id))continue;
+    if(needsChewing(f)){
+      beginChew(f);
+      return;
     }
-    beginChew(f);
-    return;
   }
 };
 
@@ -140,8 +173,8 @@ drawFood=function(f,now){
 
   drawChewBites(x,y,w,h,p);
 
-  if(f.type.w*f.type.h>1){
+  if(foodArea(f)>1){
     ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillStyle='#432e1fc7';ctx.fillText(`${f.type.w}×${f.type.h}`,x+w/2,y+h-10);
+    ctx.fillStyle='#432e1fc7';ctx.fillText(`${foodArea(f)}マス`,x+w/2,y+h-10);
   }
 };
