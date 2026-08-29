@@ -23,7 +23,7 @@ function chewDurationFor(f){
   if(f.type.name==='クッキー'&&hamSize<=2)duration=Math.max(duration,2300);
   if(f.type.name==='食パン'&&hamSize<=2)duration=Math.max(duration,2300);
   if(f.type.name==='スイカ'&&hamSize<=2)duration=Math.max(duration,3600);
-  if(f.type.name==='ホールケーキ'&&hamSize<=2)duration=Math.max(duration,8500);
+  if(f.type.name==='ホールケーキ'&&hamSize<=2)duration=Math.max(duration,11500);
   return duration;
 }
 
@@ -141,15 +141,23 @@ function foodVisualBox(f,w,h){
   return {vw:w*.80,vh:h*.76};
 }
 
+// Persistent lightweight bite marks. The food's visible area shrinks to about
+// 50% by the time chewing reaches 100%, while its gameplay footprint stays fixed.
+function foodChewScale(p){
+  return Math.sqrt(Math.max(.50,1-p*.50));
+}
+
 function drawChewBites(cx,cy,vw,vh,p){
   if(p<=0)return;
-  const count=Math.min(4,Math.max(1,Math.ceil(p*4)));
-  const radius=Math.max(5,Math.min(vw,vh)*(.060+p*.020));
+  const shrink=foodChewScale(p);
+  const sw=vw*shrink,sh=vh*shrink;
+  const count=Math.min(6,Math.max(1,Math.ceil(p*6)));
+  const radius=Math.max(5,Math.min(sw,sh)*(.055+p*.024));
   ctx.save();
   ctx.fillStyle='#f0d7ac';
   for(let i=0;i<count;i++){
-    const bx=cx+vw*(.28+(i%2)*.09);
-    const by=cy+vh*(-.20+Math.floor(i/2)*.20);
+    const bx=cx+sw*(.25+(i%3)*.09);
+    const by=cy+sh*(-.24+Math.floor(i/3)*.25);
     ctx.beginPath();ctx.arc(bx,by,radius,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
@@ -212,7 +220,7 @@ function drawWholeCake(cx,cy,size,shrink){
 drawFood=function(f,now){
   const r=rect(f),x=r.x-cameraX,y=r.y-cameraY,w=r.w,h=r.h;
   const p=Math.max(0,Math.min(1,chewProgressById.get(f.id)||0));
-  const shrink=1-p*.10;
+  const shrink=foodChewScale(p);
 
   if(f.type.name==='ひまわりの種'){
     drawSunflowerSeed(x+w/2,y+h/2,Math.min(w,h)*.82,1);
