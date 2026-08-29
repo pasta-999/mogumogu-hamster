@@ -1,17 +1,15 @@
-// Spawn-density tuning prototype.
-// Keep sunflower seeds roughly as common as before while reducing larger-food clutter.
-// 4-6 foods per chunk, weighted toward seeds.
-
+// Spawn-density tuning.
+// Keep sunflower seeds common, larger foods sparse, and the 12-cell whole cake truly rare.
 const SPAWN_MIN=4;
 const SPAWN_VARIATION=3; // 4, 5, or 6
 
 function spawnTypeByRoll(roll){
   const byName=name=>TYPES.find(t=>t.name===name);
-  if(roll<0.60)return byName('ひまわりの種')||TYPES[0];
-  if(roll<0.78)return byName('クッキー')||TYPES[0];
-  if(roll<0.89)return byName('食パン')||TYPES[0];
-  if(roll<0.96)return byName('ケーキ')||TYPES[0];
-  return byName('スイカ')||TYPES[0];
+  if(roll<0.643)return byName('ひまわりの種')||TYPES[0];
+  if(roll<0.823)return byName('クッキー')||TYPES[0];
+  if(roll<0.943)return byName('食パン')||TYPES[0];
+  if(roll<0.993)return byName('スイカ')||TYPES[0];
+  return byName('ホールケーキ')||TYPES[0]; // 0.7%
 }
 
 generateChunk=function(cx,cy){
@@ -27,7 +25,7 @@ generateChunk=function(cx,cy){
     if(!type)continue;
 
     let chosen=null;
-    for(let a=0;a<10;a++){
+    for(let a=0;a<12;a++){
       const gx=cx*CHUNK+Math.floor(hash(cx,cy,400+i*11+a)*Math.max(1,CHUNK-type.w));
       const gy=cy*CHUNK+Math.floor(hash(cx,cy,500+i*13+a)*Math.max(1,CHUNK-type.h));
       if(!placed.some(p=>overlaps(gx,gy,type.w,type.h,p.gx,p.gy,p.w,p.h))){
