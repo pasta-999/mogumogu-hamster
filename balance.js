@@ -3,17 +3,18 @@
 const strawberryIndex=TYPES.findIndex(type=>type.name==='いちご');
 if(strawberryIndex>=0)TYPES.splice(strawberryIndex,1);
 
-// Food size progression (area in cells): seed 1, cookie 4, bread 4, cake 6, watermelon 8.
+// Food size progression (effective area in cells): seed 1, cookie 3, bread 4, cake 6, watermelon 8.
+// Cookie stays square/round-looking by using sqrt(3) cells on each side instead of an awkward 3x1 footprint.
 const FOOD_SIZE_BY_NAME={
-  'ひまわりの種':[1,1],
-  'クッキー':[2,2],
-  '食パン':[2,2],
-  'ケーキ':[3,2],
-  'スイカ':[4,2]
+  'ひまわりの種':{w:1,h:1,area:1},
+  'クッキー':{w:Math.sqrt(3),h:Math.sqrt(3),area:3},
+  '食パン':{w:2,h:2,area:4},
+  'ケーキ':{w:3,h:2,area:6},
+  'スイカ':{w:4,h:2,area:8}
 };
 for(const type of TYPES){
   const size=FOOD_SIZE_BY_NAME[type.name];
-  if(size){type.w=size[0];type.h=size[1];}
+  if(size){type.w=size.w;type.h=size.h;type.areaCells=size.area;}
   type.need=1;
 }
 
@@ -52,11 +53,14 @@ startEat=function(f){
   eatFood=f;
   eatStart=performance.now();
   const hamArea=hamSize*hamSize;
-  const foodArea=f.type.w*f.type.h;
+  const foodArea=f.type.areaCells??(f.type.w*f.type.h);
   const ratio=Math.max(1,foodArea/hamArea);
   eatDuration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
 
-  // Four-cell foods should still feel like a real mouthful for the starting 2x2 hamster.
+  // Cookie should still feel like a real mouthful for the starting 2x2 hamster.
+  if(f.type.name==='クッキー'&&hamSize<=2){
+    eatDuration=Math.max(eatDuration,2300);
+  }
   if(foodArea===4&&hamSize<=2){
     eatDuration=Math.max(eatDuration,2300);
   }
@@ -70,7 +74,7 @@ checkFood=function(){
     const f=foods[i],r=rect(f);
     if(!overlaps(hamX,hamY,hs,hs,r.x,r.y,r.w,r.h))continue;
 
-    const foodArea=f.type.w*f.type.h;
+    const foodArea=f.type.areaCells??(f.type.w*f.type.h);
     const needsChewing=hamSize<=2 ? f.type.name!=='ひまわりの種' : foodArea>hamSize*hamSize;
     if(!needsChewing){
       reward(f,'パクッ！');
