@@ -8,7 +8,7 @@ const CHEW_NEAR_MARGIN=CELL*0.55;
 const chewProgressById=new Map();
 let chewLastTick=performance.now();
 
-function foodArea(f){return f.type.w*f.type.h;}
+function foodArea(f){return f.type.areaCells??(f.type.w*f.type.h);}
 
 function needsChewing(f){
   // At the starting 2x2 size, only the 1-cell sunflower seed is an instant pickup.
@@ -22,6 +22,7 @@ function chewDurationFor(f){
   const area=foodArea(f);
   const ratio=Math.max(1,area/hamArea);
   let duration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
+  if(f.type.name==='クッキー'&&hamSize<=2)duration=Math.max(duration,2300);
   if(area===4&&hamSize<=2)duration=Math.max(duration,2300);
   return duration;
 }
