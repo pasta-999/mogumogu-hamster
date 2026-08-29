@@ -3,8 +3,19 @@
 const strawberryIndex=TYPES.findIndex(type=>type.name==='いちご');
 if(strawberryIndex>=0)TYPES.splice(strawberryIndex,1);
 
-// Neutralize the legacy size gate kept in game.js.
-for(const type of TYPES){type.need=1;}
+// Food size progression (area in cells): seed 1, cookie 4, bread 4, cake 6, watermelon 8.
+const FOOD_SIZE_BY_NAME={
+  'ひまわりの種':[1,1],
+  'クッキー':[2,2],
+  '食パン':[2,2],
+  'ケーキ':[3,2],
+  'スイカ':[4,2]
+};
+for(const type of TYPES){
+  const size=FOOD_SIZE_BY_NAME[type.name];
+  if(size){type.w=size[0];type.h=size[1];}
+  type.need=1;
+}
 
 // Size baseline: sunflower seed is 1x1, hamster starts at 2x2 (4 cells).
 updateSize=function(){
@@ -45,8 +56,8 @@ startEat=function(f){
   const ratio=Math.max(1,foodArea/hamArea);
   eatDuration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
 
-  // A 2x2 cookie should feel like a real mouthful for the starting 2x2 hamster.
-  if(f.type.name==='クッキー'&&hamSize<=2){
+  // Four-cell foods should still feel like a real mouthful for the starting 2x2 hamster.
+  if(foodArea===4&&hamSize<=2){
     eatDuration=Math.max(eatDuration,2300);
   }
   flash(`${f.type.emoji||'🥜'} ${f.type.name} をモグモグ…`);
@@ -59,8 +70,9 @@ checkFood=function(){
     const f=foods[i],r=rect(f);
     if(!overlaps(hamX,hamY,hs,hs,r.x,r.y,r.w,r.h))continue;
 
-    const cookieNeedsChewing=f.type.name==='クッキー'&&hamSize<=2;
-    if(smallEnough(f)&&!cookieNeedsChewing){
+    const foodArea=f.type.w*f.type.h;
+    const needsChewing=hamSize<=2 ? f.type.name!=='ひまわりの種' : foodArea>hamSize*hamSize;
+    if(!needsChewing){
       reward(f,'パクッ！');
       continue;
     }
@@ -69,7 +81,7 @@ checkFood=function(){
   }
 };
 
-// Purge preview food generated before this override so removed foods cannot remain onscreen.
+// Purge preview food generated before this override so removed/old-size foods cannot remain onscreen.
 hamSize=2;
 hamX=hamY=-CELL;
 foods=[];
