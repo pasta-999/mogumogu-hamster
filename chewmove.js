@@ -139,25 +139,26 @@ reset=function(){
   chewResetBase();
 };
 
-// Size the visible food by its effective cell area, not by the shortest side
-// of its collision rectangle. This makes 4-cell bread visibly smaller than
-// 6-cell cake and 8-cell watermelon even when they share the same height.
-function foodGlyphSize(f,w,h){
-  const byArea=CELL*Math.sqrt(foodArea(f))*.62;
-  const fit=Math.min(w,h)*.90;
-  return Math.max(20,Math.min(byArea,fit));
+// Visible footprint follows the effective food size instead of treating every
+// emoji as a square glyph. This is still a single direct Canvas text draw per food.
+function foodVisualBox(f,w,h){
+  if(f.type.name==='クッキー')return {vw:w*.82,vh:h*.82};
+  if(f.type.name==='食パン')return {vw:w*.82,vh:h*.76};
+  if(f.type.name==='ケーキ')return {vw:w*.80,vh:h*.74};
+  if(f.type.name==='スイカ')return {vw:w*.88,vh:h*.74};
+  return {vw:w*.80,vh:h*.76};
 }
 
 // Lightweight persistent bite marks. No per-food offscreen canvas is created.
-function drawChewBites(cx,cy,size,p){
+function drawChewBites(cx,cy,vw,vh,p){
   if(p<=0)return;
   const count=Math.min(4,Math.max(1,Math.ceil(p*4)));
-  const radius=Math.max(5,size*(.055+p*.018));
+  const radius=Math.max(5,Math.min(vw,vh)*(.060+p*.020));
   ctx.save();
   ctx.fillStyle='#f0d7ac';
   for(let i=0;i<count;i++){
-    const bx=cx+size*(.23+(i%2)*.10);
-    const by=cy+size*(-.22+Math.floor(i/2)*.20);
+    const bx=cx+vw*(.28+(i%2)*.09);
+    const by=cy+vh*(-.20+Math.floor(i/2)*.20);
     ctx.beginPath();ctx.arc(bx,by,radius,0,Math.PI*2);ctx.fill();
   }
   ctx.restore();
@@ -173,17 +174,20 @@ drawFood=function(f,now){
     return;
   }
 
-  const glyphSize=foodGlyphSize(f,w,h);
+  const {vw,vh}=foodVisualBox(f,w,h);
   const cx=x+w/2,cy=y+h/2;
+  const fontSize=Math.max(20,vh*.98);
+  const stretchX=Math.max(.82,Math.min(2.15,vw/fontSize));
+
   ctx.save();
   ctx.translate(cx,cy);
-  ctx.scale(shrink,shrink);
-  ctx.font=`${glyphSize}px system-ui`;
+  ctx.scale(shrink*stretchX,shrink);
+  ctx.font=`${fontSize}px system-ui`;
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(f.type.emoji,0,-2);
   ctx.restore();
 
-  drawChewBites(cx,cy,glyphSize,p);
+  drawChewBites(cx,cy,vw,vh,p);
 
   if(foodArea(f)>1){
     ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
