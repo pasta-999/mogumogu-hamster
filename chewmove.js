@@ -11,8 +11,6 @@ let chewLastTick=performance.now();
 function foodArea(f){return f.type.areaCells??(f.type.w*f.type.h);}
 
 function needsChewing(f){
-  // At the starting 2x2 size, only the 1-cell sunflower seed is an instant pickup.
-  // Once the hamster grows, foods no larger than the hamster become instant pickups.
   if(hamSize<=2)return f.type.name!=='ひまわりの種';
   return foodArea(f)>hamSize*hamSize;
 }
@@ -23,7 +21,9 @@ function chewDurationFor(f){
   const ratio=Math.max(1,area/hamArea);
   let duration=Math.round(1000*(0.55+0.75*Math.pow(ratio,1.35)));
   if(f.type.name==='クッキー'&&hamSize<=2)duration=Math.max(duration,2300);
-  if(area===4&&hamSize<=2)duration=Math.max(duration,2300);
+  if(f.type.name==='食パン'&&hamSize<=2)duration=Math.max(duration,2300);
+  if(f.type.name==='スイカ'&&hamSize<=2)duration=Math.max(duration,3600);
+  if(f.type.name==='ホールケーキ'&&hamSize<=2)duration=Math.max(duration,8500);
   return duration;
 }
 
@@ -76,9 +76,6 @@ updateMove=function(dt){
   hamX+=q.nx*speed*dt/1000;
   hamY+=q.ny*speed*dt/1000;
   ensureChunks();
-
-  // Always check pickups while moving, even if a larger food is already being chewed.
-  // This lets a seed beside/under bread get picked up instead of being hidden by it.
   checkFood();
 };
 
@@ -112,17 +109,13 @@ checkFood=function(){
   const candidates=overlappingFoodsSmallestFirst();
   if(!candidates.length)return;
 
-  // First collect every instant small pickup in size order.
-  // This works even while a larger food is already being chewed.
   for(const f of candidates){
     if(!foods.some(v=>v.id===f.id))continue;
     if(!needsChewing(f))reward(f,'パクッ！');
   }
 
-  // Do not switch the active large food merely because another large food overlaps.
   if(eating)return;
 
-  // Then start chewing the smallest remaining chewable food.
   for(const f of candidates){
     if(!foods.some(v=>v.id===f.id))continue;
     if(needsChewing(f)){
@@ -139,17 +132,15 @@ reset=function(){
   chewResetBase();
 };
 
-// Visible footprint follows the effective food size instead of treating every
-// emoji as a square glyph. This is still a single direct Canvas text draw per food.
+// Keep the familiar v13-style emoji presentation for ordinary foods.
 function foodVisualBox(f,w,h){
   if(f.type.name==='クッキー')return {vw:w*.82,vh:h*.82};
   if(f.type.name==='食パン')return {vw:w*.82,vh:h*.76};
-  if(f.type.name==='ケーキ')return {vw:w*.80,vh:h*.74};
-  if(f.type.name==='スイカ')return {vw:w*.88,vh:h*.74};
+  if(f.type.name==='スイカ')return {vw:w*.86,vh:h*.78};
+  if(f.type.name==='ホールケーキ')return {vw:w*.86,vh:h*.86};
   return {vw:w*.80,vh:h*.76};
 }
 
-// Lightweight persistent bite marks. No per-food offscreen canvas is created.
 function drawChewBites(cx,cy,vw,vh,p){
   if(p<=0)return;
   const count=Math.min(4,Math.max(1,Math.ceil(p*4)));
@@ -161,6 +152,60 @@ function drawChewBites(cx,cy,vw,vh,p){
     const by=cy+vh*(-.20+Math.floor(i/2)*.20);
     ctx.beginPath();ctx.arc(bx,by,radius,0,Math.PI*2);ctx.fill();
   }
+  ctx.restore();
+}
+
+// Lightweight round whole-cake drawing inspired by a classic strawberry celebration cake.
+// It stays Canvas-only so adding the rare cake does not add image-loading or per-frame texture cost.
+function drawWholeCake(cx,cy,size,shrink){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(shrink,shrink);
+  const rx=size*.43,ry=size*.25,sideH=size*.28;
+
+  ctx.fillStyle='#eeb64f';
+  ctx.beginPath();ctx.ellipse(0,sideH*.20,rx,ry,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff4df';
+  ctx.fillRect(-rx,0,rx*2,sideH*.62);
+  ctx.fillStyle='#f8a5bd';
+  ctx.fillRect(-rx,sideH*.50,rx*2,sideH*.14);
+
+  ctx.fillStyle='#fff8ed';
+  ctx.beginPath();ctx.ellipse(0,-sideH*.05,rx,ry,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#e5bca7';ctx.lineWidth=Math.max(2,size*.018);ctx.stroke();
+
+  ctx.fillStyle='#f59ab7';
+  for(let i=0;i<12;i++){
+    const a=(Math.PI*2*i)/12;
+    const px=Math.cos(a)*rx*.83,py=-sideH*.05+Math.sin(a)*ry*.80;
+    ctx.beginPath();ctx.arc(px,py,size*.035,0,Math.PI*2);ctx.fill();
+  }
+
+  ctx.fillStyle='#fffdf7';
+  for(let i=0;i<6;i++){
+    const a=(Math.PI*2*i)/6+Math.PI/6;
+    const px=Math.cos(a)*rx*.55,py=-sideH*.05+Math.sin(a)*ry*.48;
+    ctx.beginPath();ctx.arc(px,py,size*.062,0,Math.PI*2);ctx.fill();
+  }
+
+  for(let i=0;i<4;i++){
+    const a=(Math.PI*2*i)/4+Math.PI/4;
+    const px=Math.cos(a)*rx*.62,py=-sideH*.05+Math.sin(a)*ry*.54;
+    ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/2);
+    ctx.fillStyle='#f24e59';
+    ctx.beginPath();ctx.ellipse(0,0,size*.045,size*.060,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#65a846';
+    ctx.beginPath();ctx.moveTo(0,-size*.060);ctx.lineTo(-size*.025,-size*.082);ctx.lineTo(0,-size*.073);ctx.lineTo(size*.025,-size*.082);ctx.closePath();ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.fillStyle='#d93343';
+  const cherries=[[-.045,.005],[.045,.010],[0,.065]];
+  for(const [px,py] of cherries){ctx.beginPath();ctx.arc(size*px,size*py-sideH*.05,size*.042,0,Math.PI*2);ctx.fill();}
+  ctx.strokeStyle='#5d8736';ctx.lineWidth=Math.max(2,size*.012);
+  ctx.beginPath();ctx.moveTo(-size*.045,-sideH*.05);ctx.quadraticCurveTo(-size*.020,-size*.11,0,-size*.14);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(size*.045,-sideH*.045);ctx.quadraticCurveTo(size*.020,-size*.11,0,-size*.14);ctx.stroke();
+
   ctx.restore();
 }
 
@@ -176,16 +221,20 @@ drawFood=function(f,now){
 
   const {vw,vh}=foodVisualBox(f,w,h);
   const cx=x+w/2,cy=y+h/2;
-  const fontSize=Math.max(20,vh*.98);
-  const stretchX=Math.max(.82,Math.min(2.15,vw/fontSize));
 
-  ctx.save();
-  ctx.translate(cx,cy);
-  ctx.scale(shrink*stretchX,shrink);
-  ctx.font=`${fontSize}px system-ui`;
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(f.type.emoji,0,-2);
-  ctx.restore();
+  if(f.type.name==='ホールケーキ'){
+    drawWholeCake(cx,cy,Math.min(vw,vh),shrink);
+  }else{
+    const fontSize=Math.max(20,vh*.98);
+    const stretchX=Math.max(.82,Math.min(2.15,vw/fontSize));
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.scale(shrink*stretchX,shrink);
+    ctx.font=`${fontSize}px system-ui`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(f.type.emoji,0,-2);
+    ctx.restore();
+  }
 
   drawChewBites(cx,cy,vw,vh,p);
 
