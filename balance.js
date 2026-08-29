@@ -4,14 +4,13 @@ const strawberryIndex=TYPES.findIndex(type=>type.name==='いちご');
 if(strawberryIndex>=0)TYPES.splice(strawberryIndex,1);
 
 // Food size progression (effective area in cells):
-// seed 1, cookie 3, bread 4, watermelon 6, round whole cake 12.
+// seed 1, cookie 3, bread 4, watermelon 6, round whole cake 16.
 const FOOD_SIZE_BY_NAME={
   'ひまわりの種':{w:1,h:1,area:1},
   'クッキー':{w:Math.sqrt(3),h:Math.sqrt(3),area:3},
   '食パン':{w:2,h:2,area:4},
   'スイカ':{w:3,h:2,area:6},
-  // Keep the 12-cell cake visually round, like the 3-cell cookie.
-  'ケーキ':{w:Math.sqrt(12),h:Math.sqrt(12),area:12}
+  'ケーキ':{w:4,h:4,area:16}
 };
 for(const type of TYPES){
   const size=FOOD_SIZE_BY_NAME[type.name];
@@ -24,8 +23,8 @@ const wholeCake=TYPES.find(type=>type.name==='ケーキ');
 if(wholeCake){
   wholeCake.name='ホールケーキ';
   wholeCake.emoji='🎂';
-  wholeCake.score=700;
-  wholeCake.xp=70;
+  wholeCake.score=900;
+  wholeCake.xp=90;
 }
 
 // Size baseline: sunflower seed is 1x1, hamster starts at 2x2 (4 cells).
@@ -70,7 +69,7 @@ startEat=function(f){
   if(f.type.name==='クッキー'&&hamSize<=2)eatDuration=Math.max(eatDuration,2300);
   if(f.type.name==='食パン'&&hamSize<=2)eatDuration=Math.max(eatDuration,2300);
   if(f.type.name==='スイカ'&&hamSize<=2)eatDuration=Math.max(eatDuration,3600);
-  if(f.type.name==='ホールケーキ'&&hamSize<=2)eatDuration=Math.max(eatDuration,8500);
+  if(f.type.name==='ホールケーキ'&&hamSize<=2)eatDuration=Math.max(eatDuration,11500);
   flash(`${f.type.emoji||'🥜'} ${f.type.name} をモグモグ…`);
 };
 
